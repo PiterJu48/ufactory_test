@@ -95,15 +95,21 @@ export const Storage = {
   // Farms Management
   async getFarms() {
     if (!isSupabaseEnabled) return [];
-    const { data, error } = await supabase.from('farms').select('*').order('name');
+    const { data, error } = await supabase.from('farms').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return data;
   },
 
   async saveFarm(farm) {
-    const { data, error } = await supabase.from('farms').upsert([farm]);
+    const { data, error } = await supabase.from('farms').insert([
+      { 
+        name: farm.name, 
+        phone: farm.phone, 
+        address: farm.address 
+      }
+    ]).select();
     if (error) throw error;
-    return { success: true };
+    return { success: true, data: data[0] };
   },
 
   async deleteFarm(farmId) {
