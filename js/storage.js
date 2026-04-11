@@ -73,20 +73,31 @@ export const Storage = {
     if (error) throw error;
     return data;
   },
+async saveUser(user) {
+  // 1. Create actual Auth user in Supabase
+  const fullEmail = user.username.includes('@') ? user.username : `${user.username}@awcfis.com`;
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email: fullEmail,
+    password: user.password,
+  });
 
-  async saveUser(user) {
-    // Note: In Supabase, users are created via Auth, and metadata in 'profiles'
-    const { data, error } = await supabase.from('profiles').insert([
-      { 
-        username: user.username, 
-        name: user.name, 
-        role: user.role,
-        farm_id: user.farm_id || null
-      }
-    ]);
-    if (error) throw error;
-    return { success: true };
-  },
+  if (authError) throw authError;
+
+  // 2. Link metadata in 'profiles' table
+  const { error: profileError } = await supabase.from('profiles').insert([
+    { 
+      id: authData.user.id,
+      username: user.username, 
+      name: user.name, 
+      role: user.role,
+      farm_id: user.farm_id || null
+    }
+  ]);
+
+  if (profileError) throw profileError;
+  return { success: true };
+},
+
 
   async deleteUser(userId) {
     await supabase.from('profiles').delete().eq('id', userId);
