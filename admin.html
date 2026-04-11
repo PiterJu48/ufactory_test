@@ -110,23 +110,72 @@
       window.location.href = 'index.html';
     }
 
+    let editingFarmId = null;
+    let editingItemId = null;
+
     const renderFarms = async () => {
       const farms = await Storage.getFarms();
       const list = document.getElementById('farm-list');
       const select = document.getElementById('user-farm-select');
       
-      list.innerHTML = farms.map(f => `
-        <div class="card" style="padding: 1rem; margin-bottom: 0; border: 1px solid #ddd; position: relative; background: #fff;">
-          <button onclick="deleteFarm('${f.id}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: none; color: #ccc; padding: 0; font-size: 1.2rem;">&times;</button>
-          <div style="font-weight: 800; color: var(--primary-color); margin-bottom: 0.3rem;">${f.name}</div>
-          <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.2rem;">📞 ${f.phone || '-'}</div>
-          <div style="font-size: 0.8rem; color: #666; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;">📍 ${f.address || '-'}</div>
-        </div>
-      `).join('');
+      list.innerHTML = farms.map(f => {
+        // Escape special characters for JS string arguments
+        const escName = f.name.replace(/'/g, "\\'");
+        const escPhone = (f.phone || '').replace(/'/g, "\\'");
+        const escAddr = (f.address || '').replace(/'/g, "\\'");
+        
+        return `
+          <div class="card farm-card ${editingFarmId === f.id ? 'editing' : ''}" 
+               style="padding: 1rem; margin-bottom: 0; position: relative; cursor: pointer;" 
+               onclick="startEditFarm('${f.id}', '${escName}', '${escPhone}', '${escAddr}')">
+            <div style="position: absolute; top: 0.5rem; right: 0.5rem; display: flex; gap: 0.5rem;">
+              <button onclick="event.stopPropagation(); deleteFarm('${f.id}')" 
+                      style="background: none; color: #ccc; padding: 0; font-size: 1.2rem;">&times;</button>
+            </div>
+            <div style="font-weight: 800; color: var(--primary-color); margin-bottom: 0.3rem;">${f.name}</div>
+            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.2rem;">📞 ${f.phone || '-'}</div>
+            <div style="font-size: 0.8rem; color: #666; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;">📍 ${f.address || '-'}</div>
+            <div style="font-size: 0.7rem; color: var(--primary-color); margin-top: 0.5rem; text-align: right;">${editingFarmId === f.id ? '수정 중...' : '클릭하여 수정'}</div>
+          </div>
+        `;
+      }).join('');
 
       // Update select dropdown
       select.innerHTML = '<option value="">소속 농장 선택 (필요 시)</option>' + 
         farms.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+    };
+
+    window.startEditFarm = (id, name, phone, address) => {
+      editingFarmId = id;
+      document.getElementById('farm-name-input').value = name;
+      document.getElementById('farm-phone-input').value = phone;
+      document.getElementById('farm-address-input').value = address;
+      document.getElementById('farm-submit-btn').textContent = '농장 정보 수정';
+      
+      // Add cancel button if not exists
+      if (!document.getElementById('farm-cancel-btn')) {
+        const cancelBtn = document.createElement('button');
+        cancelBtn.id = 'farm-cancel-btn';
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn-outline';
+        cancelBtn.style.marginTop = '0.5rem';
+        cancelBtn.style.width = '100%';
+        cancelBtn.textContent = '수정 취소';
+        cancelBtn.onclick = resetFarmForm;
+        document.getElementById('farm-form').appendChild(cancelBtn);
+      }
+      
+      document.getElementById('farm-form').scrollIntoView({ behavior: 'smooth' });
+      renderFarms();
+    };
+
+    const resetFarmForm = () => {
+      editingFarmId = null;
+      document.getElementById('farm-form').reset();
+      document.getElementById('farm-submit-btn').textContent = '농장 등록';
+      const cancelBtn = document.getElementById('farm-cancel-btn');
+      if (cancelBtn) cancelBtn.remove();
+      renderFarms();
     };
 
     const renderUsers = async () => {
@@ -138,7 +187,7 @@
             <div>
               <strong>${u.name}</strong> (@${u.username})
               <span class="badge ${u.role === 'ADMIN' ? 'badge-admin' : (u.role === 'INSPECTOR' ? 'badge-inspector' : 'badge-owner')}">${u.role}</span>
-              ${u.farms ? `<div style="font-size: 0.8rem; color: var(--primary-color); margin-top: 0.2rem;">소속: ${u.farms.name}</div>` : ''}
+              ${u.farm ? `<div style="font-size: 0.8rem; color: var(--primary-color); margin-top: 0.2rem;">소속: ${u.farm.name}</div>` : ''}
             </div>
             ${u.role !== 'ADMIN' ? `<button onclick="deleteUser('${u.id}')" style="background: none; color: #d32f2f; padding: 0;">삭제</button>` : ''}
           </div>
@@ -150,12 +199,45 @@
       const items = await Storage.getItems();
       const list = document.getElementById('item-list');
       list.innerHTML = items.map(i => `
-        <div style="padding: 1rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 0.5rem; position: relative;">
+        <div class="item-card ${editingItemId === i.id ? 'editing' : ''}" style="padding: 1rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 0.5rem; position: relative; cursor: pointer;" onclick="startEditItem('${i.id}', '${i.category}', '${i.title}', '${i.description.replace(/'/g, "\\'")}', ${i.max_score || i.maxScore})">
           <div style="font-size: 0.8rem; color: var(--primary-color); font-weight: bold;">${i.category}</div>
           <div style="font-weight: bold; margin: 0.2rem 0;">${i.title} (배점: ${i.max_score || i.maxScore})</div>
-          <button onclick="deleteItem('${i.id}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: none; color: #999; font-size: 0.8rem;">삭제</button>
+          <button onclick="event.stopPropagation(); deleteItem('${i.id}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: none; color: #999; font-size: 0.8rem;">삭제</button>
         </div>
       `).join('');
+    };
+
+    window.startEditItem = (id, category, title, desc, max) => {
+      editingItemId = id;
+      document.getElementById('item-category').value = category;
+      document.getElementById('item-title').value = title;
+      document.getElementById('item-desc').value = desc;
+      document.getElementById('item-max').value = max;
+      
+      const submitBtn = document.querySelector('#item-form button[type="submit"]');
+      submitBtn.textContent = '항목 수정';
+      
+      if (!document.getElementById('item-cancel-btn')) {
+        const cancelBtn = document.createElement('button');
+        cancelBtn.id = 'item-cancel-btn';
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn-outline';
+        cancelBtn.style.marginTop = '0.5rem';
+        cancelBtn.style.width = '100%';
+        cancelBtn.textContent = '수정 취소';
+        cancelBtn.onclick = resetItemForm;
+        document.getElementById('item-form').appendChild(cancelBtn);
+      }
+      renderItems();
+    };
+
+    const resetItemForm = () => {
+      editingItemId = null;
+      document.getElementById('item-form').reset();
+      document.querySelector('#item-form button[type="submit"]').textContent = '항목 등록';
+      const cancelBtn = document.getElementById('item-cancel-btn');
+      if (cancelBtn) cancelBtn.remove();
+      renderItems();
     };
 
     const renderReports = async () => {
@@ -190,15 +272,17 @@
         submitBtn.disabled = true;
         loading.style.display = 'block';
         
-        const res = await Storage.saveFarm(farmData);
-        if (res.success) {
+        if (editingFarmId) {
+          await Storage.updateFarm(editingFarmId, farmData);
+          resetFarmForm();
+        } else {
+          await Storage.saveFarm(farmData);
           e.target.reset();
-          await renderFarms(); // Immediate UI update
-          console.log('농장이 성공적으로 등록되었습니다.');
         }
+        await renderFarms();
       } catch (err) {
         console.error('Farm save error:', err);
-        alert('농장 등록 중 오류가 발생했습니다.');
+        alert('처리 중 오류가 발생했습니다.');
       } finally {
         submitBtn.disabled = false;
         loading.style.display = 'none';
@@ -219,13 +303,20 @@
 
     document.getElementById('item-form').onsubmit = async (e) => {
       e.preventDefault();
-      await Storage.saveItem({
+      const itemData = {
         title: document.getElementById('item-title').value,
         category: document.getElementById('item-category').value,
         description: document.getElementById('item-desc').value,
         max_score: parseInt(document.getElementById('item-max').value)
-      });
-      e.target.reset();
+      };
+
+      if (editingItemId) {
+        await Storage.updateItem(editingItemId, itemData);
+        resetItemForm();
+      } else {
+        await Storage.saveItem(itemData);
+        e.target.reset();
+      }
       renderItems();
     };
 

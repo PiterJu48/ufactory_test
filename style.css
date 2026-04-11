@@ -146,6 +146,23 @@ input:focus {
   font-weight: bold;
 }
 
+/* Card Interactivity */
+.farm-card, .item-card {
+  transition: all 0.2s ease;
+  border: 1px solid #eee;
+}
+
+.farm-card:hover, .item-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.1);
+}
+
+.farm-card.editing, .item-card.editing {
+  border: 2px solid var(--primary-color) !important;
+  background-color: var(--secondary-color) !important;
+}
+
 .badge-admin { background: #e3f2fd; color: #1976d2; }
 .badge-inspector { background: #fff3e0; color: #f57c00; }
 .badge-owner { background: #f1f8e9; color: #388e3c; }
