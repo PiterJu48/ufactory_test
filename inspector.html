@@ -62,9 +62,9 @@
     const noItemsMessage = document.getElementById('no-items-message');
 
     const init = async () => {
-      const users = await Storage.getUsers();
-      const owners = users.filter(u => u.role === 'OWNER');
-      farmSelect.innerHTML += owners.map(o => `<option value="${o.id}">${o.name} 농장</option>`).join('');
+      // Updated to fetch from 'farms' table instead of 'OWNER' users
+      const farms = await Storage.getFarms();
+      farmSelect.innerHTML += farms.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
     };
 
     const renderInspectionForm = async () => {
@@ -87,14 +87,14 @@
               <p style="font-size: 0.9rem; color: #666; margin-top: 0.3rem;">${item.description}</p>
             </div>
             <div style="text-align: right;">
-              <span style="font-weight: bold; color: var(--primary-color);">배점: ${item.maxScore}</span>
+              <span style="font-weight: bold; color: var(--primary-color);">배점: ${item.max_score || item.maxScore}</span>
             </div>
           </div>
           
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div>
               <label style="font-size: 0.8rem; display: block; margin-bottom: 0.3rem;">점수 입력</label>
-              <input type="number" name="score_${item.id}" min="0" max="${item.maxScore}" required placeholder="0 ~ ${item.maxScore}">
+              <input type="number" name="score_${item.id}" min="0" max="${item.max_score || item.maxScore}" required placeholder="0 ~ ${item.max_score || item.maxScore}">
             </div>
             <div>
               <label style="font-size: 0.8rem; display: block; margin-bottom: 0.3rem;">합격 여부</label>
@@ -129,7 +129,6 @@
         comment: formData.get(`comment_${item.id}`)
       }));
 
-      // 1. Save to SQLite
       await Storage.saveReport({
         farm_id: farmId,
         inspector_id: currentUser.id,
@@ -138,7 +137,6 @@
         is_virtual: 0
       });
 
-      // 2. Generate Excel
       const excelData = results.map(res => {
         const item = items.find(i => i.id === res.itemId);
         return {
@@ -147,7 +145,7 @@
           '카테고리': item?.category || '-',
           '평가항목': item?.title || '-',
           '점수': res.score,
-          '배점': item?.maxScore || '-',
+          '배점': (item?.max_score || item?.maxScore) || '-',
           '결과': res.status === 'PASS' ? '합격' : '불합격',
           '항목의견': res.comment || '',
           '종합의견': overallComment

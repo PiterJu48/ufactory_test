@@ -69,16 +69,20 @@ export const Storage = {
   // Users (from 'profiles' table)
   async getUsers() {
     if (!isSupabaseEnabled) return [];
-    const { data, error } = await supabase.from('profiles').select('*');
+    const { data, error } = await supabase.from('profiles').select('*, farms(name)');
     if (error) throw error;
     return data;
   },
 
   async saveUser(user) {
     // Note: In Supabase, users are created via Auth, and metadata in 'profiles'
-    // This is a simplified version for the prototype.
     const { data, error } = await supabase.from('profiles').insert([
-      { username: user.username, name: user.name, role: user.role }
+      { 
+        username: user.username, 
+        name: user.name, 
+        role: user.role,
+        farm_id: user.farm_id || null
+      }
     ]);
     if (error) throw error;
     return { success: true };
@@ -86,6 +90,24 @@ export const Storage = {
 
   async deleteUser(userId) {
     await supabase.from('profiles').delete().eq('id', userId);
+  },
+
+  // Farms Management
+  async getFarms() {
+    if (!isSupabaseEnabled) return [];
+    const { data, error } = await supabase.from('farms').select('*').order('name');
+    if (error) throw error;
+    return data;
+  },
+
+  async saveFarm(farm) {
+    const { data, error } = await supabase.from('farms').upsert([farm]);
+    if (error) throw error;
+    return { success: true };
+  },
+
+  async deleteFarm(farmId) {
+    await supabase.from('farms').delete().eq('id', farmId);
   },
 
   // Inspection Items

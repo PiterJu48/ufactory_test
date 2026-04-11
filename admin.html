@@ -14,40 +14,47 @@
   <main class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
       <h1>관리자 대시보드</h1>
-      <span class="badge badge-admin">ADMINISTRATOR</span>
+      <div style="display: flex; gap: 0.5rem;">
+        <span class="badge badge-admin">ADMINISTRATOR</span>
+        <button id="download-excel" class="btn-outline" style="padding: 0.5rem 1rem;">Excel 다운로드</button>
+      </div>
     </div>
 
-    <!-- Inspection Reports Section -->
+    <!-- Farm Management Section -->
     <section class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h2>공식 점검 결과 내역</h2>
-        <button id="download-excel" class="btn-outline">Excel 다운로드</button>
-      </div>
-      <p style="margin-bottom: 1.5rem; font-size: 0.9rem; color: #666;">점검자가 제출한 공식 점검 결과 목록입니다.</p>
-      
-      <div id="report-list" style="overflow-x: auto;">
-        <!-- Report list populated by JS -->
+      <h2>🏢 농장 등록 및 관리</h2>
+      <p style="margin-bottom: 1.5rem; font-size: 0.9rem; color: #666;">시스템에 등록될 농장 정보를 관리합니다.</p>
+      <form id="farm-form" style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.5rem;">
+        <input type="text" id="farm-name-input" placeholder="농장 이름 (예: 푸른들 농장)" required>
+        <button type="submit" class="btn-primary">농장 등록</button>
+      </form>
+      <div id="farm-list" style="margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.8rem;">
+        <!-- Farm list populated by JS -->
       </div>
     </section>
 
     <div class="grid">
-      <!-- User Management -->
+      <!-- Account Management -->
       <section class="card">
-        <h2>계정 권한 관리</h2>
-        <p style="margin-bottom: 1rem; font-size: 0.9rem; color: #666;">계정을 생성하고 권한을 부여할 수 있습니다.</p>
+        <h2>👤 계정 권한 관리</h2>
+        <p style="margin-bottom: 1rem; font-size: 0.9rem; color: #666;">계정을 생성하고 농장 및 권한을 부여합니다.</p>
         <form id="user-form">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
             <input type="text" id="user-username" placeholder="아이디" required>
             <input type="password" id="user-password" placeholder="비밀번호" required>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-            <input type="text" id="user-name" placeholder="사용자/농장 이름" required>
+            <input type="text" id="user-name" placeholder="사용자 이름" required>
             <select id="user-role">
               <option value="INSPECTOR">점검자</option>
               <option value="OWNER">농장주</option>
             </select>
           </div>
-          <button type="submit" class="btn-primary" style="width: 100%;">계정 생성</button>
+          <select id="user-farm-select" style="margin-top: 0.5rem;">
+            <option value="">소속 농장 선택 (필요 시)</option>
+            <!-- Options populated by JS -->
+          </select>
+          <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">계정 생성</button>
         </form>
         
         <div id="user-list" style="margin-top: 1.5rem;">
@@ -57,7 +64,7 @@
 
       <!-- Item Management -->
       <section class="card">
-        <h2>점검 항목 등록</h2>
+        <h2>✅ 점검 항목 등록</h2>
         <p style="margin-bottom: 1rem; font-size: 0.9rem; color: #666;">시스템에서 사용될 공식 점검 항목을 관리합니다.</p>
         <form id="item-form">
           <input type="text" id="item-title" placeholder="평가 항목 (예: 사육 공간 확보)" required>
@@ -72,6 +79,12 @@
         </div>
       </section>
     </div>
+
+    <!-- Official Results Section (Simplified) -->
+    <section class="card">
+      <h2>공식 점검 결과 내역</h2>
+      <div id="report-list" style="overflow-x: auto; margin-top: 1rem;"></div>
+    </section>
   </main>
 
   <script type="module">
@@ -84,16 +97,36 @@
       window.location.href = 'index.html';
     }
 
+    const renderFarms = async () => {
+      const farms = await Storage.getFarms();
+      const list = document.getElementById('farm-list');
+      const select = document.getElementById('user-farm-select');
+      
+      list.innerHTML = farms.map(f => `
+        <div style="background: var(--secondary-color); padding: 0.5rem 1rem; border-radius: 20px; display: flex; align-items: center; gap: 0.5rem; border: 1px solid #ddd;">
+          <span style="font-weight: 500;">${f.name}</span>
+          <button onclick="deleteFarm('${f.id}')" style="background: none; color: #999; padding: 0; font-size: 1rem; line-height: 1;">&times;</button>
+        </div>
+      `).join('');
+
+      // Update select dropdown
+      select.innerHTML = '<option value="">소속 농장 선택 (필요 시)</option>' + 
+        farms.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+    };
+
     const renderUsers = async () => {
       const users = await Storage.getUsers();
       const list = document.getElementById('user-list');
       list.innerHTML = users.map(u => `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem; border-bottom: 1px solid #eee;">
-          <div>
-            <strong>${u.name}</strong> (@${u.username})
-            <span class="badge ${u.role === 'ADMIN' ? 'badge-admin' : (u.role === 'INSPECTOR' ? 'badge-inspector' : 'badge-owner')}">${u.role}</span>
+        <div style="padding: 1rem; border-bottom: 1px solid #eee;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <strong>${u.name}</strong> (@${u.username})
+              <span class="badge ${u.role === 'ADMIN' ? 'badge-admin' : (u.role === 'INSPECTOR' ? 'badge-inspector' : 'badge-owner')}">${u.role}</span>
+              ${u.farms ? `<div style="font-size: 0.8rem; color: var(--primary-color); margin-top: 0.2rem;">소속: ${u.farms.name}</div>` : ''}
+            </div>
+            ${u.role !== 'ADMIN' ? `<button onclick="deleteUser('${u.id}')" style="background: none; color: #d32f2f; padding: 0;">삭제</button>` : ''}
           </div>
-          ${u.role !== 'ADMIN' ? `<button onclick="deleteUser('${u.id}')" style="background: none; color: #d32f2f; padding: 0;">삭제</button>` : ''}
         </div>
       `).join('');
     };
@@ -104,8 +137,7 @@
       list.innerHTML = items.map(i => `
         <div style="padding: 1rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 0.5rem; position: relative;">
           <div style="font-size: 0.8rem; color: var(--primary-color); font-weight: bold;">${i.category}</div>
-          <div style="font-weight: bold; margin: 0.2rem 0;">${i.title} (배점: ${i.maxScore})</div>
-          <div style="font-size: 0.85rem; color: #666;">${i.description}</div>
+          <div style="font-weight: bold; margin: 0.2rem 0;">${i.title} (배점: ${i.max_score || i.maxScore})</div>
           <button onclick="deleteItem('${i.id}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: none; color: #999; font-size: 0.8rem;">삭제</button>
         </div>
       `).join('');
@@ -115,116 +147,64 @@
       const reports = await Storage.getReports();
       const items = await Storage.getItems();
       const list = document.getElementById('report-list');
-      
-      if (reports.length === 0) {
-        list.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">제출된 점검 결과가 없습니다.</p>';
-        return;
-      }
-
-      const tableHtml = `
-        <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
-          <thead>
-            <tr style="background: var(--secondary-color); text-align: left;">
-              <th style="padding: 0.8rem; border-bottom: 2px solid #ddd;">날짜</th>
-              <th style="padding: 0.8rem; border-bottom: 2px solid #ddd;">농장</th>
-              <th style="padding: 0.8rem; border-bottom: 2px solid #ddd;">총점</th>
-              <th style="padding: 0.8rem; border-bottom: 2px solid #ddd;">의견</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${reports.map(r => {
-              const totalScore = r.results.reduce((acc, curr) => acc + curr.score, 0);
-              const maxScoreTotal = items.reduce((acc, curr) => acc + curr.maxScore, 0);
-              const date = new Date(r.date).toLocaleDateString();
-              return `
-                <tr style="border-bottom: 1px solid #eee;">
-                  <td style="padding: 0.8rem;">${date}</td>
-                  <td style="padding: 0.8rem;"><strong>${r.farm_name}</strong></td>
-                  <td style="padding: 0.8rem; color: var(--primary-color); font-weight: bold;">${totalScore} / ${maxScoreTotal}</td>
-                  <td style="padding: 0.8rem; font-size: 0.85rem; color: #555;">${r.overall_comment || '-'}</td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      `;
-      list.innerHTML = tableHtml;
+      if (reports.length === 0) { list.innerHTML = '<p style="text-align: center; color: #999; padding: 1rem;">내역 없음</p>'; return; }
+      const maxScoreTotal = items.reduce((acc, curr) => acc + (curr.max_score || curr.maxScore), 0);
+      list.innerHTML = `<table style="width: 100%; text-align: left; font-size: 0.9rem;">
+        <tr style="border-bottom: 2px solid #ddd;"><th>날짜</th><th>농장</th><th>점수</th></tr>
+        ${reports.map(r => `<tr><td>${new Date(r.date).toLocaleDateString()}</td><td>${r.farm_name}</td><td>${r.results.reduce((acc, curr) => acc + curr.score, 0)} / ${maxScoreTotal}</td></tr>`).join('')}
+      </table>`;
     };
 
-    window.deleteUser = async (id) => {
-      if(confirm('이 사용자를 삭제하시겠습니까?')) {
-        await Storage.deleteUser(id);
-        renderUsers();
-      }
-    };
+    // Handlers
+    window.deleteFarm = async (id) => { if(confirm('농장을 삭제하시겠습니까?')) { await Storage.deleteFarm(id); renderFarms(); } };
+    window.deleteUser = async (id) => { if(confirm('사용자를 삭제하시겠습니까?')) { await Storage.deleteUser(id); renderUsers(); } };
+    window.deleteItem = async (id) => { if(confirm('항목을 삭제하시겠습니까?')) { await Storage.deleteItem(id); renderItems(); } };
 
-    window.deleteItem = async (id) => {
-      if(confirm('이 점검 항목을 삭제하시겠습니까?')) {
-        await Storage.deleteItem(id);
-        renderItems();
-      }
+    document.getElementById('farm-form').onsubmit = async (e) => {
+      e.preventDefault();
+      await Storage.saveFarm({ name: document.getElementById('farm-name-input').value });
+      e.target.reset();
+      renderFarms();
     };
 
     document.getElementById('user-form').onsubmit = async (e) => {
       e.preventDefault();
-      const username = document.getElementById('user-username').value;
-      const password = document.getElementById('user-password').value;
-      const name = document.getElementById('user-name').value;
-      const role = document.getElementById('user-role').value;
-      
-      const res = await Storage.saveUser({ username, password, name, role });
-      if (res.success) {
-        e.target.reset();
-        renderUsers();
-      } else {
-        alert(res.message);
-      }
+      const res = await Storage.saveUser({
+        username: document.getElementById('user-username').value,
+        password: document.getElementById('user-password').value,
+        name: document.getElementById('user-name').value,
+        role: document.getElementById('user-role').value,
+        farm_id: document.getElementById('user-farm-select').value
+      });
+      if (res.success) { e.target.reset(); renderUsers(); } else { alert(res.message); }
     };
 
     document.getElementById('item-form').onsubmit = async (e) => {
       e.preventDefault();
-      const title = document.getElementById('item-title').value;
-      const category = document.getElementById('item-category').value;
-      const description = document.getElementById('item-desc').value;
-      const maxScore = parseInt(document.getElementById('item-max').value);
-      await Storage.saveItem({ title, category, description, maxScore });
+      await Storage.saveItem({
+        title: document.getElementById('item-title').value,
+        category: document.getElementById('item-category').value,
+        description: document.getElementById('item-desc').value,
+        max_score: parseInt(document.getElementById('item-max').value)
+      });
       e.target.reset();
       renderItems();
     };
 
     document.getElementById('download-excel').onclick = async () => {
       const reports = await Storage.getReports();
-      if (reports.length === 0) {
-        alert('다운로드할 데이터가 없습니다.');
-        return;
-      }
-
       const items = await Storage.getItems();
-      
-      const excelData = reports.flatMap(r => {
-        const date = new Date(r.date).toLocaleDateString();
-        return r.results.map(res => {
-          const item = items.find(i => i.id === res.item_id);
-          return {
-            '날짜': date,
-            '농장': r.farm_name,
-            '카테고리': item?.category || '-',
-            '평가항목': item?.title || '-',
-            '점수': res.score,
-            '배점': item?.maxScore || '-',
-            '결과': res.status === 'PASS' ? '합격' : '불합격',
-            '항목의견': res.comment || '',
-            '종합의견': r.overall_comment || ''
-          };
-        });
-      });
-
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "InspectionResults");
-      XLSX.writeFile(workbook, `AWCFIS_전체결과_${new Date().toISOString().split('T')[0]}.xlsx`);
+      const excelData = reports.flatMap(r => r.results.map(res => {
+        const item = items.find(i => i.id === res.item_id);
+        return { '날짜': new Date(r.date).toLocaleDateString(), '농장': r.farm_name, '카테고리': item?.category || '-', '평가항목': item?.title || '-', '점수': res.score, '결과': res.status === 'PASS' ? '합격' : '불합격' };
+      }));
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Reports");
+      XLSX.writeFile(wb, "AWCFIS_Results.xlsx");
     };
 
+    renderFarms();
     renderUsers();
     renderItems();
     renderReports();
