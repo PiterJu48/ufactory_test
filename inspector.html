@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AWCFIS - 점검자</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script type="module" src="js/components/app-header.js"></script>
 </head>
 <body>
@@ -120,6 +121,10 @@
       e.preventDefault();
       const formData = new FormData(e.target);
       const items = Storage.getItems();
+      const farmId = farmSelect.value;
+      const farmName = farmSelect.options[farmSelect.selectedIndex].text;
+      const overallComment = document.getElementById('overall-comment').value;
+
       const results = items.map(item => ({
         itemId: item.id,
         score: parseInt(formData.get(`score_${item.id}`)),
@@ -127,14 +132,38 @@
         comment: formData.get(`comment_${item.id}`)
       }));
 
-      Storage.saveReport({
-        farmId: farmSelect.value,
-        inspectorId: 'current_inspector', // Simplified
+      const reportData = {
+        farmId,
+        inspectorId: 'current_inspector', 
         results,
-        overallComment: document.getElementById('overall-comment').value
+        overallComment
+      };
+
+      // 1. Save to Storage (for Admin)
+      Storage.saveReport(reportData);
+
+      // 2. Generate and Download Excel (for Inspector)
+      const excelData = results.map(res => {
+        const item = items.find(i => i.id === res.itemId);
+        return {
+          '날짜': new Date().toLocaleDateString(),
+          '농장': farmName,
+          '카테고리': item?.category || '-',
+          '평가항목': item?.title || '-',
+          '점수': res.score,
+          '배점': item?.maxScore || '-',
+          '결과': res.status === 'PASS' ? '합격' : '불합격',
+          '항목의견': res.comment || '',
+          '종합의견': overallComment
+        };
       });
 
-      alert('점검 결과가 성공적으로 제출되었습니다.');
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "InspectionResult");
+      XLSX.writeFile(workbook, `점검결과_${farmName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+      alert('점검 결과가 성공적으로 제출되었으며, 엑셀 파일이 다운로드되었습니다.');
       window.location.href = 'index.html';
     };
   </script>
