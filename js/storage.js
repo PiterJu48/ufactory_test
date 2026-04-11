@@ -160,7 +160,7 @@ async saveUser(user) {
     if (!isSupabaseEnabled) return [];
     const { data, error } = await supabase
       .from('reports')
-      .select('*, profiles(name)')
+      .select('*, profiles(name), report_results(*)')
       .eq('is_virtual', false)
       .order('created_at', { ascending: false });
     
@@ -170,7 +170,8 @@ async saveUser(user) {
     return data.map(r => ({
       ...r,
       farm_name: r.profiles?.name || '알 수 없음',
-      date: r.created_at
+      date: r.created_at,
+      results: r.report_results || []
     }));
   },
 
