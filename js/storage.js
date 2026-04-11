@@ -5,7 +5,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // TO USER: Replace YOUR_SUPABASE_ANON_KEY with your actual "anon public" key 
 // from your Supabase Project Settings > API.
 const SUPABASE_URL = "https://aentoqkcgzfijezieidb.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlbnRvcWtjZ3pmaWplemllaWRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NzMzMjYsImV4cCI6MjA5MTQ0OTMyNn0.h8MbiDaP7xlRPg9rvtLNZvCZEKI8KSJK4IeXTDGTuHU";
 
 let supabase;
 let isSupabaseEnabled = false;
