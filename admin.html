@@ -67,7 +67,7 @@
             <option value="">소속 농장 선택 (필요 시)</option>
             <!-- Options populated by JS -->
           </select>
-          <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">계정 생성</button>
+          <button type="submit" id="user-submit-btn" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">계정 생성</button>
         </form>
         
         <div id="user-list" style="margin-top: 1.5rem;">
@@ -84,7 +84,7 @@
           <input type="text" id="item-category" placeholder="카테고리 (예: 사육환경)" required>
           <textarea id="item-desc" placeholder="상세 설명" rows="2" required></textarea>
           <input type="number" id="item-max" placeholder="배점 (최대 점수)" required>
-          <button type="submit" class="btn-primary" style="width: 100%;">항목 등록</button>
+          <button type="submit" id="item-submit-btn" class="btn-primary" style="width: 100%;">항목 등록</button>
         </form>
         
         <div id="item-list" style="margin-top: 1.5rem; max-height: 400px; overflow-y: auto;">
@@ -112,6 +112,7 @@
 
     let editingFarmId = null;
     let editingItemId = null;
+    let editingUserId = null;
 
     const renderFarms = async () => {
       const farms = await Storage.getFarms();
@@ -119,7 +120,6 @@
       const select = document.getElementById('user-farm-select');
       
       list.innerHTML = farms.map(f => {
-        // Escape special characters for JS string arguments
         const escName = f.name.replace(/'/g, "\\'");
         const escPhone = (f.phone || '').replace(/'/g, "\\'");
         const escAddr = (f.address || '').replace(/'/g, "\\'");
@@ -140,7 +140,6 @@
         `;
       }).join('');
 
-      // Update select dropdown
       select.innerHTML = '<option value="">소속 농장 선택 (필요 시)</option>' + 
         farms.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
     };
@@ -152,7 +151,6 @@
       document.getElementById('farm-address-input').value = address;
       document.getElementById('farm-submit-btn').textContent = '농장 정보 수정';
       
-      // Add cancel button if not exists
       if (!document.getElementById('farm-cancel-btn')) {
         const cancelBtn = document.createElement('button');
         cancelBtn.id = 'farm-cancel-btn';
@@ -164,7 +162,6 @@
         cancelBtn.onclick = resetFarmForm;
         document.getElementById('farm-form').appendChild(cancelBtn);
       }
-      
       document.getElementById('farm-form').scrollIntoView({ behavior: 'smooth' });
       renderFarms();
     };
@@ -181,30 +178,85 @@
     const renderUsers = async () => {
       const users = await Storage.getUsers();
       const list = document.getElementById('user-list');
-      list.innerHTML = users.map(u => `
-        <div style="padding: 1rem; border-bottom: 1px solid #eee;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-              <strong>${u.name}</strong> (@${u.username})
-              <span class="badge ${u.role === 'ADMIN' ? 'badge-admin' : (u.role === 'INSPECTOR' ? 'badge-inspector' : 'badge-owner')}">${u.role}</span>
-              ${u.farm ? `<div style="font-size: 0.8rem; color: var(--primary-color); margin-top: 0.2rem;">소속: ${u.farm.name}</div>` : ''}
+      list.innerHTML = users.map(u => {
+        const escName = u.name.replace(/'/g, "\\'");
+        return `
+          <div class="card user-card ${editingUserId === u.id ? 'editing' : ''}" 
+               style="padding: 1rem; margin-bottom: 0.5rem; border: 1px solid #eee; cursor: pointer;" 
+               onclick="startEditUser('${u.id}', '${escName}', '${u.role}', '${u.farm_id || ''}')">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <strong>${u.name}</strong> (@${u.username})
+                <span class="badge ${u.role === 'ADMIN' ? 'badge-admin' : (u.role === 'INSPECTOR' ? 'badge-inspector' : 'badge-owner')}">${u.role}</span>
+                ${u.farm ? `<div style="font-size: 0.8rem; color: var(--primary-color); margin-top: 0.2rem;">소속: ${u.farm.name}</div>` : ''}
+                ${editingUserId === u.id ? `<div style="font-size: 0.7rem; color: var(--primary-color); margin-top: 0.3rem;">수정 중...</div>` : ''}
+              </div>
+              ${u.role !== 'ADMIN' ? `<button onclick="event.stopPropagation(); deleteUser('${u.id}')" style="background: none; color: #d32f2f; padding: 0;">삭제</button>` : ''}
             </div>
-            ${u.role !== 'ADMIN' ? `<button onclick="deleteUser('${u.id}')" style="background: none; color: #d32f2f; padding: 0;">삭제</button>` : ''}
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+    };
+
+    window.startEditUser = (id, name, role, farmId) => {
+      if (role === 'ADMIN') return;
+      
+      editingUserId = id;
+      document.getElementById('user-name').value = name;
+      document.getElementById('user-role').value = role;
+      document.getElementById('user-farm-select').value = farmId;
+      
+      document.getElementById('user-username').disabled = true;
+      document.getElementById('user-password').placeholder = "비밀번호 수정 불가";
+      document.getElementById('user-password').disabled = true;
+      document.getElementById('user-password').required = false;
+
+      document.getElementById('user-submit-btn').textContent = '계정 정보 수정';
+      
+      if (!document.getElementById('user-cancel-btn')) {
+        const cancelBtn = document.createElement('button');
+        cancelBtn.id = 'user-cancel-btn';
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn-outline';
+        cancelBtn.style.marginTop = '0.5rem';
+        cancelBtn.style.width = '100%';
+        cancelBtn.textContent = '수정 취소';
+        cancelBtn.onclick = resetUserForm;
+        document.getElementById('user-form').appendChild(cancelBtn);
+      }
+      document.getElementById('user-form').scrollIntoView({ behavior: 'smooth' });
+      renderUsers();
+    };
+
+    const resetUserForm = () => {
+      editingUserId = null;
+      const form = document.getElementById('user-form');
+      form.reset();
+      document.getElementById('user-username').disabled = false;
+      document.getElementById('user-password').disabled = false;
+      document.getElementById('user-password').placeholder = "비밀번호";
+      document.getElementById('user-password').required = true;
+      
+      document.getElementById('user-submit-btn').textContent = '계정 생성';
+      const cancelBtn = document.getElementById('user-cancel-btn');
+      if (cancelBtn) cancelBtn.remove();
+      renderUsers();
     };
 
     const renderItems = async () => {
       const items = await Storage.getItems();
       const list = document.getElementById('item-list');
-      list.innerHTML = items.map(i => `
-        <div class="item-card ${editingItemId === i.id ? 'editing' : ''}" style="padding: 1rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 0.5rem; position: relative; cursor: pointer;" onclick="startEditItem('${i.id}', '${i.category}', '${i.title}', '${i.description.replace(/'/g, "\\'")}', ${i.max_score || i.maxScore})">
-          <div style="font-size: 0.8rem; color: var(--primary-color); font-weight: bold;">${i.category}</div>
-          <div style="font-weight: bold; margin: 0.2rem 0;">${i.title} (배점: ${i.max_score || i.maxScore})</div>
-          <button onclick="event.stopPropagation(); deleteItem('${i.id}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: none; color: #999; font-size: 0.8rem;">삭제</button>
-        </div>
-      `).join('');
+      list.innerHTML = items.map(i => {
+        const escTitle = i.title.replace(/'/g, "\\'");
+        const escDesc = (i.description || '').replace(/'/g, "\\'");
+        return `
+          <div class="item-card ${editingItemId === i.id ? 'editing' : ''}" style="padding: 1rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 0.5rem; position: relative; cursor: pointer;" onclick="startEditItem('${i.id}', '${i.category}', '${escTitle}', '${escDesc}', ${i.max_score || i.maxScore})">
+            <div style="font-size: 0.8rem; color: var(--primary-color); font-weight: bold;">${i.category}</div>
+            <div style="font-weight: bold; margin: 0.2rem 0;">${i.title} (배점: ${i.max_score || i.maxScore})</div>
+            <button onclick="event.stopPropagation(); deleteItem('${i.id}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: none; color: #999; font-size: 0.8rem;">삭제</button>
+          </div>
+        `;
+      }).join('');
     };
 
     window.startEditItem = (id, category, title, desc, max) => {
@@ -214,8 +266,7 @@
       document.getElementById('item-desc').value = desc;
       document.getElementById('item-max').value = max;
       
-      const submitBtn = document.querySelector('#item-form button[type="submit"]');
-      submitBtn.textContent = '항목 수정';
+      document.getElementById('item-submit-btn').textContent = '항목 수정';
       
       if (!document.getElementById('item-cancel-btn')) {
         const cancelBtn = document.createElement('button');
@@ -228,13 +279,14 @@
         cancelBtn.onclick = resetItemForm;
         document.getElementById('item-form').appendChild(cancelBtn);
       }
+      document.getElementById('item-form').scrollIntoView({ behavior: 'smooth' });
       renderItems();
     };
 
     const resetItemForm = () => {
       editingItemId = null;
       document.getElementById('item-form').reset();
-      document.querySelector('#item-form button[type="submit"]').textContent = '항목 등록';
+      document.getElementById('item-submit-btn').textContent = '항목 등록';
       const cancelBtn = document.getElementById('item-cancel-btn');
       if (cancelBtn) cancelBtn.remove();
       renderItems();
@@ -252,7 +304,6 @@
       </table>`;
     };
 
-    // Handlers
     window.deleteFarm = async (id) => { if(confirm('농장을 삭제하시겠습니까?')) { await Storage.deleteFarm(id); await renderFarms(); } };
     window.deleteUser = async (id) => { if(confirm('사용자를 삭제하시겠습니까?')) { await Storage.deleteUser(id); await renderUsers(); } };
     window.deleteItem = async (id) => { if(confirm('항목을 삭제하시겠습니까?')) { await Storage.deleteItem(id); await renderItems(); } };
@@ -261,17 +312,14 @@
       e.preventDefault();
       const submitBtn = document.getElementById('farm-submit-btn');
       const loading = document.getElementById('farm-loading');
-      
       const farmData = {
         name: document.getElementById('farm-name-input').value,
         phone: document.getElementById('farm-phone-input').value,
         address: document.getElementById('farm-address-input').value
       };
-      
       try {
         submitBtn.disabled = true;
         loading.style.display = 'block';
-        
         if (editingFarmId) {
           await Storage.updateFarm(editingFarmId, farmData);
           resetFarmForm();
@@ -281,7 +329,6 @@
         }
         await renderFarms();
       } catch (err) {
-        console.error('Farm save error:', err);
         alert('처리 중 오류가 발생했습니다.');
       } finally {
         submitBtn.disabled = false;
@@ -291,14 +338,32 @@
 
     document.getElementById('user-form').onsubmit = async (e) => {
       e.preventDefault();
-      const res = await Storage.saveUser({
-        username: document.getElementById('user-username').value,
-        password: document.getElementById('user-password').value,
+      const userData = {
         name: document.getElementById('user-name').value,
         role: document.getElementById('user-role').value,
         farm_id: document.getElementById('user-farm-select').value
-      });
-      if (res.success) { e.target.reset(); renderUsers(); } else { alert(res.message); }
+      };
+      if (editingUserId) {
+        const res = await Storage.updateUser(editingUserId, userData);
+        if (res.success) {
+          resetUserForm();
+          renderUsers();
+        } else {
+          alert(res.message);
+        }
+      } else {
+        const res = await Storage.saveUser({
+          username: document.getElementById('user-username').value,
+          password: document.getElementById('user-password').value,
+          ...userData
+        });
+        if (res.success) { 
+          e.target.reset(); 
+          renderUsers(); 
+        } else { 
+          alert(res.message); 
+        }
+      }
     };
 
     document.getElementById('item-form').onsubmit = async (e) => {
@@ -309,7 +374,6 @@
         description: document.getElementById('item-desc').value,
         max_score: parseInt(document.getElementById('item-max').value)
       };
-
       if (editingItemId) {
         await Storage.updateItem(editingItemId, itemData);
         resetItemForm();

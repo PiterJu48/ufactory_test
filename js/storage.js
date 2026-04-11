@@ -108,6 +108,24 @@ export const Storage = {
     await supabase.from('profiles').delete().eq('id', userId);
   },
 
+  async updateUser(userId, userData) {
+    if (!isSupabaseEnabled) return { success: false };
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        name: userData.name,
+        role: userData.role,
+        farm_id: userData.farm_id || null
+      })
+      .eq('id', userId);
+    
+    if (error) {
+      console.error("Profile Update Error:", error.message);
+      return { success: false, message: error.message };
+    }
+    return { success: true };
+  },
+
   // Farms
   async getFarms() {
     if (!isSupabaseEnabled) return [];
