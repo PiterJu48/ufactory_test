@@ -22,7 +22,6 @@
         <h3>점검 대상 농장 선택</h3>
         <select id="farm-select">
           <option value="">농장을 선택하세요</option>
-          <!-- Options populated by JS -->
         </select>
       </div>
 
@@ -31,9 +30,7 @@
         <p style="margin-bottom: 2rem; color: #666;">각 항목별로 점수와 합격 여부를 기록해 주세요.</p>
         
         <form id="inspection-form">
-          <div id="inspection-items">
-            <!-- Items populated by JS -->
-          </div>
+          <div id="inspection-items"></div>
           
           <div style="margin-top: 2rem; border-top: 2px solid #eee; padding-top: 2rem;">
             <h3>종합 의견</h3>
@@ -53,7 +50,8 @@
     import { Storage } from './js/storage.js';
 
     // Guard
-    if (sessionStorage.getItem('awcfis_role') !== 'INSPECTOR') {
+    const currentUser = Storage.getUser();
+    if (!currentUser || currentUser.role !== 'INSPECTOR') {
       alert('점검자 권한이 없습니다.');
       window.location.href = 'index.html';
     }
@@ -63,12 +61,14 @@
     const itemsContainer = document.getElementById('inspection-items');
     const noItemsMessage = document.getElementById('no-items-message');
 
-    // Populate farms (Owners)
-    const owners = Storage.getUsers().filter(u => u.role === 'OWNER');
-    farmSelect.innerHTML += owners.map(o => `<option value="${o.id}">${o.name} 농장</option>`).join('');
+    const init = async () => {
+      const users = await Storage.getUsers();
+      const owners = users.filter(u => u.role === 'OWNER');
+      farmSelect.innerHTML += owners.map(o => `<option value="${o.id}">${o.name} 농장</option>`).join('');
+    };
 
-    const renderInspectionForm = () => {
-      const items = Storage.getItems();
+    const renderInspectionForm = async () => {
+      const items = await Storage.getItems();
       if (items.length === 0) {
         noItemsMessage.style.display = 'block';
         formContainer.style.display = 'none';
@@ -78,7 +78,7 @@
       noItemsMessage.style.display = 'none';
       formContainer.style.display = 'block';
       
-      itemsContainer.innerHTML = items.map((item, index) => `
+      itemsContainer.innerHTML = items.map(item => `
         <div class="card" style="padding: 1.5rem; border-left: 5px solid var(--primary-color);">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
             <div>
@@ -110,17 +110,14 @@
     };
 
     farmSelect.onchange = (e) => {
-      if (e.target.value) {
-        renderInspectionForm();
-      } else {
-        formContainer.style.display = 'none';
-      }
+      if (e.target.value) renderInspectionForm();
+      else formContainer.style.display = 'none';
     };
 
-    document.getElementById('inspection-form').onsubmit = (e) => {
+    document.getElementById('inspection-form').onsubmit = async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
-      const items = Storage.getItems();
+      const items = await Storage.getItems();
       const farmId = farmSelect.value;
       const farmName = farmSelect.options[farmSelect.selectedIndex].text;
       const overallComment = document.getElementById('overall-comment').value;
@@ -132,17 +129,16 @@
         comment: formData.get(`comment_${item.id}`)
       }));
 
-      const reportData = {
-        farmId,
-        inspectorId: 'current_inspector', 
+      // 1. Save to SQLite
+      await Storage.saveReport({
+        farm_id: farmId,
+        inspector_id: currentUser.id,
+        overall_comment: overallComment,
         results,
-        overallComment
-      };
+        is_virtual: 0
+      });
 
-      // 1. Save to Storage (for Admin)
-      Storage.saveReport(reportData);
-
-      // 2. Generate and Download Excel (for Inspector)
+      // 2. Generate Excel
       const excelData = results.map(res => {
         const item = items.find(i => i.id === res.itemId);
         return {
@@ -163,9 +159,11 @@
       XLSX.utils.book_append_sheet(workbook, worksheet, "InspectionResult");
       XLSX.writeFile(workbook, `점검결과_${farmName}_${new Date().toISOString().split('T')[0]}.xlsx`);
 
-      alert('점검 결과가 성공적으로 제출되었으며, 엑셀 파일이 다운로드되었습니다.');
+      alert('점검 결과가 저장되었으며 엑셀 파일이 다운로드되었습니다.');
       window.location.href = 'index.html';
     };
+
+    init();
   </script>
 </body>
 </html>

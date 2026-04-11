@@ -3,46 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AWCFIS - 홈</title>
+  <title>AWCFIS - 로그인</title>
   <link rel="stylesheet" href="style.css">
   <script type="module" src="js/components/app-header.js"></script>
-  <script type="module" src="main.js"></script>
 </head>
 <body>
   <app-header page-title="AWCFIS"></app-header>
   
   <main class="container">
-    <div class="card" style="text-align: center; max-width: 600px; margin: 4rem auto;">
-      <h1 style="font-size: 2.5rem; color: var(--primary-color);">동물복지 인증<br>농장 점검 시스템</h1>
-      <p style="margin-bottom: 2.5rem; color: #666;">사용자의 역할을 선택하여 접속해 주세요.</p>
+    <div class="card" style="max-width: 400px; margin: 4rem auto;">
+      <h1 style="text-align: center; color: var(--primary-color);">로그인</h1>
+      <p style="text-align: center; margin-bottom: 2rem; color: #666;">계정 정보를 입력해 주세요.</p>
       
-      <div style="display: flex; flex-direction: column; gap: 1rem;">
-        <button class="btn-primary" id="login-admin">관리자로 로그인</button>
-        <button class="btn-primary" id="login-inspector">점검자로 로그인</button>
-        <button class="btn-primary" id="login-owner">농장주로 로그인</button>
+      <form id="login-form">
+        <input type="text" id="username" placeholder="아이디" required>
+        <input type="password" id="password" placeholder="비밀번호" required>
+        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">로그인</button>
+      </form>
+      <div id="error-msg" style="color: var(--error-color); font-size: 0.9rem; margin-top: 1rem; text-align: center; display: none;"></div>
+      
+      <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee; font-size: 0.8rem; color: #999;">
+        <p>기본 관리자 계정: admin / admin123</p>
       </div>
     </div>
   </main>
 
   <footer>
-    <p>&copy; 2026 Animal Welfare Certified Farm Inspection System. All rights reserved.</p>
+    <p>&copy; 2026 Animal Welfare Certified Farm Inspection System.</p>
   </footer>
 
   <script type="module">
     import { Storage } from './js/storage.js';
-    Storage.init();
 
-    document.getElementById('login-admin').onclick = () => {
-      sessionStorage.setItem('awcfis_role', 'ADMIN');
-      window.location.href = 'admin.html';
-    };
-    document.getElementById('login-inspector').onclick = () => {
-      sessionStorage.setItem('awcfis_role', 'INSPECTOR');
-      window.location.href = 'inspector.html';
-    };
-    document.getElementById('login-owner').onclick = () => {
-      sessionStorage.setItem('awcfis_role', 'OWNER');
-      window.location.href = 'owner.html';
+    // If already logged in, redirect
+    const user = Storage.getUser();
+    if (user) {
+      if (user.role === 'ADMIN') window.location.href = 'admin.html';
+      else if (user.role === 'INSPECTOR') window.location.href = 'inspector.html';
+      else if (user.role === 'OWNER') window.location.href = 'owner.html';
+    }
+
+    document.getElementById('login-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const userVal = document.getElementById('username').value;
+      const passVal = document.getElementById('password').value;
+      const errorDiv = document.getElementById('error-msg');
+      
+      try {
+        const user = await Storage.login(userVal, passVal);
+        if (user.role === 'ADMIN') window.location.href = 'admin.html';
+        else if (user.role === 'INSPECTOR') window.location.href = 'inspector.html';
+        else if (user.role === 'OWNER') window.location.href = 'owner.html';
+      } catch (err) {
+        errorDiv.textContent = err.message;
+        errorDiv.style.display = 'block';
+      }
     };
   </script>
 </body>

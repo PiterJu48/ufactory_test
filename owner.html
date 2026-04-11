@@ -23,9 +23,7 @@
         <p style="margin-bottom: 2rem; color: #666;">공식 점검 항목을 기반으로 우리 농장의 상태를 미리 점검해 보세요.</p>
         
         <form id="assessment-form">
-          <div id="assessment-items">
-            <!-- Items populated by JS -->
-          </div>
+          <div id="assessment-items"></div>
           <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">자가 점검 완료</button>
         </form>
       </section>
@@ -34,9 +32,7 @@
       <aside>
         <section class="card" style="padding: 1.5rem;">
           <h3>최근 점검 결과</h3>
-          <div id="history-list" style="margin-top: 1rem;">
-            <!-- History items populated by JS -->
-          </div>
+          <div id="history-list" style="margin-top: 1rem;"></div>
         </section>
         
         <div class="card" style="background-color: var(--secondary-color); border: none;">
@@ -53,7 +49,8 @@
     import { Storage } from './js/storage.js';
 
     // Guard
-    if (sessionStorage.getItem('awcfis_role') !== 'OWNER') {
+    const currentUser = Storage.getUser();
+    if (!currentUser || currentUser.role !== 'OWNER') {
       alert('농장주 권한이 없습니다.');
       window.location.href = 'index.html';
     }
@@ -61,8 +58,8 @@
     const itemsContainer = document.getElementById('assessment-items');
     const historyList = document.getElementById('history-list');
 
-    const renderAssessmentForm = () => {
-      const items = Storage.getItems();
+    const renderAssessmentForm = async () => {
+      const items = await Storage.getItems();
       itemsContainer.innerHTML = items.map(item => `
         <div style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #eee;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -78,39 +75,46 @@
       `).join('');
     };
 
-    const renderHistory = () => {
-      const history = Storage.getSelfAssessments();
+    const renderHistory = async () => {
+      const history = await Storage.getVirtualReports(currentUser.id);
+      const items = await Storage.getItems();
+      const maxPossible = items.reduce((acc, curr) => acc + curr.maxScore, 0);
+
       if (history.length === 0) {
         historyList.innerHTML = '<p style="color: #999; font-size: 0.9rem;">이전 기록이 없습니다.</p>';
         return;
       }
       
-      historyList.innerHTML = history.reverse().map(h => {
+      historyList.innerHTML = history.map(h => {
         const total = h.results.reduce((acc, curr) => acc + curr.score, 0);
-        const max = Storage.getItems().reduce((acc, curr) => acc + curr.maxScore, 0);
         const date = new Date(h.date).toLocaleDateString();
         return `
           <div style="padding: 0.8rem; border-bottom: 1px solid #eee; font-size: 0.9rem;">
             <div style="display: flex; justify-content: space-between;">
               <strong>${date}</strong>
-              <span style="color: var(--primary-color); font-weight: bold;">${total} / ${max}</span>
+              <span style="color: var(--primary-color); font-weight: bold;">${total} / ${maxPossible}</span>
             </div>
           </div>
         `;
       }).join('');
     };
 
-    document.getElementById('assessment-form').onsubmit = (e) => {
+    document.getElementById('assessment-form').onsubmit = async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
-      const items = Storage.getItems();
+      const items = await Storage.getItems();
       const results = items.map(item => ({
         itemId: item.id,
         score: parseInt(formData.get(`score_${item.id}`))
       }));
 
-      Storage.saveSelfAssessment({ results });
-      alert('자가 점검이 완료되었습니다. 결과를 확인하세요.');
+      await Storage.saveReport({
+        farm_id: currentUser.id,
+        is_virtual: 1,
+        results
+      });
+
+      alert('자가 점검이 저장되었습니다.');
       renderHistory();
     };
 

@@ -1,3 +1,5 @@
+import { Storage } from '../storage.js';
+
 class AppHeader extends HTMLElement {
   constructor() {
     super();
@@ -5,8 +7,9 @@ class AppHeader extends HTMLElement {
   }
 
   connectedCallback() {
-    const title = this.getAttribute('page-title') || '동물복지 인증 농장 점검 시스템';
-    const role = sessionStorage.getItem('awcfis_role') || 'NONE';
+    const user = Storage.getUser();
+    const role = user ? user.role : 'GUEST';
+    const name = user ? user.name : '';
     
     this.shadowRoot.innerHTML = `
       <style>
@@ -26,6 +29,7 @@ class AppHeader extends HTMLElement {
           display: flex;
           align-items: center;
           gap: 0.5rem;
+          cursor: pointer;
         }
         nav ul {
           display: flex;
@@ -33,6 +37,7 @@ class AppHeader extends HTMLElement {
           gap: 1.5rem;
           margin: 0;
           padding: 0;
+          align-items: center;
         }
         nav a {
           text-decoration: none;
@@ -45,6 +50,11 @@ class AppHeader extends HTMLElement {
         nav a:hover {
           opacity: 1;
         }
+        .role-info {
+          display: flex;
+          align-items: center;
+          gap: 0.8rem;
+        }
         .role-badge {
           background: rgba(255,255,255,0.2);
           padding: 0.3rem 0.8rem;
@@ -53,32 +63,43 @@ class AppHeader extends HTMLElement {
           font-weight: bold;
           text-transform: uppercase;
         }
-        @media (max-width: 600px) {
+        .user-name {
+          font-size: 0.85rem;
+          font-weight: 500;
+        }
+        @media (max-width: 768px) {
           header { padding: 1rem; flex-direction: column; gap: 1rem; }
         }
       </style>
       <header>
-        <div class="logo">
+        <div class="logo" id="logo">
           <span>🌿</span> AWCFIS
         </div>
         <nav>
           <ul>
             <li><a href="index.html">홈</a></li>
-            ${role === 'ADMIN' ? '<li><a href="admin.html">관리자</a></li>' : ''}
-            ${role === 'INSPECTOR' ? '<li><a href="inspector.html">점검자</a></li>' : ''}
-            ${role === 'OWNER' ? '<li><a href="owner.html">농장주</a></li>' : ''}
-            <li><a href="#" id="logout">로그아웃</a></li>
+            ${role === 'ADMIN' ? '<li><a href="admin.html">관리</a></li>' : ''}
+            ${role === 'INSPECTOR' ? '<li><a href="inspector.html">점검</a></li>' : ''}
+            ${role === 'OWNER' ? '<li><a href="owner.html">자가진단</a></li>' : ''}
+            ${user ? '<li><a href="#" id="logout">로그아웃</a></li>' : ''}
           </ul>
         </nav>
-        <div class="role-badge">${role}</div>
+        <div class="role-info">
+          ${name ? `<span class="user-name">${name} 님</span>` : ''}
+          <div class="role-badge">${role}</div>
+        </div>
       </header>
     `;
 
-    this.shadowRoot.getElementById('logout').addEventListener('click', (e) => {
-      e.preventDefault();
-      sessionStorage.removeItem('awcfis_role');
-      window.location.href = 'index.html';
-    });
+    this.shadowRoot.getElementById('logo').onclick = () => window.location.href = 'index.html';
+    
+    const logoutBtn = this.shadowRoot.getElementById('logout');
+    if (logoutBtn) {
+      logoutBtn.onclick = (e) => {
+        e.preventDefault();
+        Storage.logout();
+      };
+    }
   }
 }
 
