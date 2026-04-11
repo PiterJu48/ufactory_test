@@ -9,7 +9,12 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static('.'));
+
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // --- Database Initialization ---
 db.exec(`
@@ -63,7 +68,7 @@ app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE username = ? AND password = ?').get(username, password);
   if (user) {
-    const { password, ...safeUser } = user;
+    const { password: _, ...safeUser } = user;
     res.json({ success: true, user: safeUser });
   } else {
     res.status(401).json({ success: false, message: '아이디 또는 비밀번호가 일치하지 않습니다.' });
@@ -151,6 +156,9 @@ app.get('/api/reports/virtual/:userId', (req, res) => {
   });
   res.json(reports);
 });
+
+// Static files (should be last to not interfere with API)
+app.use(express.static('.'));
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`AWCFIS Server running at http://0.0.0.0:${port}`);
