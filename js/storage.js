@@ -31,19 +31,29 @@ export const Storage = {
       throw new Error("Supabase Anon Key를 설정하거나 admin/admin123으로 접속하세요.");
     }
 
+    const fullEmail = email.includes('@') ? email : `${email}@awcfis.com`;
+    console.log("Attempting login for:", fullEmail);
+
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.includes('@') ? email : `${email}@awcfis.com`,
+      email: fullEmail,
       password: password
     });
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("Auth Error:", error.message);
+      throw new Error("아이디 또는 비밀번호가 일치하지 않습니다.");
+    }
 
-    // Fetch user profile from 'profiles' table (assuming standard RBAC setup)
-    const { data: profile } = await supabase
+    // Fetch user profile from 'profiles' table
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', data.user.id)
-      .single();
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("Profile Fetch Error:", profileError.message);
+    }
 
     const sessionUser = {
       id: data.user.id,
