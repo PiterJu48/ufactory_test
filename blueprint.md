@@ -48,4 +48,4 @@ A web-based platform for managing and conducting animal welfare inspections for 
 - [x] Build the Inspector Interface (`inspector.html`) with scoring logic.
 - [x] Build the Farm Owner Interface (`owner.html`) for virtual scoring.
 - [x] Verify all functionalities and responsive design.
-- [ ] Deploy via `git push`.
+- [x] Deploy via `git push`.
