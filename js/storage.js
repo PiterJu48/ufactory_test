@@ -3,17 +3,31 @@ const API_BASE = '/api';
 export const Storage = {
   // Authentication
   async login(username, password) {
-    const res = await fetch(`${API_BASE}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-    const data = await res.json();
-    if (data.success) {
-      sessionStorage.setItem('awcfis_user', JSON.stringify(data.user));
-      return data.user;
+    try {
+      const res = await fetch(`${API_BASE}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error('Server response was not JSON:', text);
+        throw new Error('서버로부터 올바르지 않은 응답을 받았습니다.');
+      }
+
+      if (data.success) {
+        sessionStorage.setItem('awcfis_user', JSON.stringify(data.user));
+        return data.user;
+      }
+      throw new Error(data.message || '로그인 실패');
+    } catch (err) {
+      console.error('Login error:', err);
+      throw err;
     }
-    throw new Error(data.message || '로그인 실패');
   },
 
   getUser() {
