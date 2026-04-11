@@ -55,10 +55,16 @@ export const Storage = {
       console.error("Profile Fetch Error:", profileError.message);
     }
 
+    // Determine role: Force ADMIN for the master admin email
+    let userRole = profile?.role || 'OWNER';
+    if (fullEmail === 'admin@awcfis.com') {
+      userRole = 'ADMIN';
+    }
+
     const sessionUser = {
       id: data.user.id,
-      name: profile?.name || '사용자',
-      role: profile?.role || 'OWNER'
+      name: profile?.name || (fullEmail === 'admin@awcfis.com' ? '최고관리자' : '사용자'),
+      role: userRole
     };
     
     sessionStorage.setItem('awcfis_user', JSON.stringify(sessionUser));
