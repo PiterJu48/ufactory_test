@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWCFIS - 점검자</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="js/components/app-header.js"></script>
+</head>
+<body>
+  <app-header page-title="점검자 페이지"></app-header>
+  
+  <main class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+      <h1>현장 점검 수행</h1>
+      <span class="badge badge-inspector">INSPECTOR</span>
+    </div>
+
+    <section class="card">
+      <div style="margin-bottom: 2rem;">
+        <h3>점검 대상 농장 선택</h3>
+        <select id="farm-select">
+          <option value="">농장을 선택하세요</option>
+          <!-- Options populated by JS -->
+        </select>
+      </div>
+
+      <div id="inspection-form-container" style="display: none;">
+        <h3>점검 항목 평가</h3>
+        <p style="margin-bottom: 2rem; color: #666;">각 항목별로 점수와 합격 여부를 기록해 주세요.</p>
+        
+        <form id="inspection-form">
+          <div id="inspection-items">
+            <!-- Items populated by JS -->
+          </div>
+          
+          <div style="margin-top: 2rem; border-top: 2px solid #eee; padding-top: 2rem;">
+            <h3>종합 의견</h3>
+            <textarea id="overall-comment" rows="4" placeholder="종합적인 점검 의견을 입력하세요"></textarea>
+            <button type="submit" class="btn-primary" style="width: 100%; font-size: 1.2rem; padding: 1.5rem;">점검 결과 제출</button>
+          </div>
+        </form>
+      </div>
+      
+      <div id="no-items-message" style="display: none; text-align: center; padding: 3rem;">
+        <p>등록된 점검 항목이 없습니다. 관리자에게 문의하세요.</p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { Storage } from './js/storage.js';
+
+    // Guard
+    if (sessionStorage.getItem('awcfis_role') !== 'INSPECTOR') {
+      alert('점검자 권한이 없습니다.');
+      window.location.href = 'index.html';
+    }
+
+    const farmSelect = document.getElementById('farm-select');
+    const formContainer = document.getElementById('inspection-form-container');
+    const itemsContainer = document.getElementById('inspection-items');
+    const noItemsMessage = document.getElementById('no-items-message');
+
+    // Populate farms (Owners)
+    const owners = Storage.getUsers().filter(u => u.role === 'OWNER');
+    farmSelect.innerHTML += owners.map(o => `<option value="${o.id}">${o.name} 농장</option>`).join('');
+
+    const renderInspectionForm = () => {
+      const items = Storage.getItems();
+      if (items.length === 0) {
+        noItemsMessage.style.display = 'block';
+        formContainer.style.display = 'none';
+        return;
+      }
+
+      noItemsMessage.style.display = 'none';
+      formContainer.style.display = 'block';
+      
+      itemsContainer.innerHTML = items.map((item, index) => `
+        <div class="card" style="padding: 1.5rem; border-left: 5px solid var(--primary-color);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div>
+              <span class="badge badge-owner" style="margin-bottom: 0.5rem; display: inline-block;">${item.category}</span>
+              <h4 style="margin: 0;">${item.title}</h4>
+              <p style="font-size: 0.9rem; color: #666; margin-top: 0.3rem;">${item.description}</p>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-weight: bold; color: var(--primary-color);">배점: ${item.maxScore}</span>
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="font-size: 0.8rem; display: block; margin-bottom: 0.3rem;">점수 입력</label>
+              <input type="number" name="score_${item.id}" min="0" max="${item.maxScore}" required placeholder="0 ~ ${item.maxScore}">
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; display: block; margin-bottom: 0.3rem;">합격 여부</label>
+              <select name="status_${item.id}" required>
+                <option value="PASS">합격 (Pass)</option>
+                <option value="FAIL">불합격 (Fail)</option>
+              </select>
+            </div>
+          </div>
+          <textarea name="comment_${item.id}" placeholder="항목별 특이사항 (선택사항)" style="margin-top: 0.8rem; margin-bottom: 0;"></textarea>
+        </div>
+      `).join('');
+    };
+
+    farmSelect.onchange = (e) => {
+      if (e.target.value) {
+        renderInspectionForm();
+      } else {
+        formContainer.style.display = 'none';
+      }
+    };
+
+    document.getElementById('inspection-form').onsubmit = (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const items = Storage.getItems();
+      const results = items.map(item => ({
+        itemId: item.id,
+        score: parseInt(formData.get(`score_${item.id}`)),
+        status: formData.get(`status_${item.id}`),
+        comment: formData.get(`comment_${item.id}`)
+      }));
+
+      Storage.saveReport({
+        farmId: farmSelect.value,
+        inspectorId: 'current_inspector', // Simplified
+        results,
+        overallComment: document.getElementById('overall-comment').value
+      });
+
+      alert('점검 결과가 성공적으로 제출되었습니다.');
+      window.location.href = 'index.html';
+    };
+  </script>
+</body>
+</html>

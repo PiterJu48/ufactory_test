@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWCFIS - 관리자</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="js/components/app-header.js"></script>
+</head>
+<body>
+  <app-header page-title="관리자 페이지"></app-header>
+  
+  <main class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+      <h1>관리자 대시보드</h1>
+      <span class="badge badge-admin">ADMINISTRATOR</span>
+    </div>
+
+    <div class="grid">
+      <!-- User Management -->
+      <section class="card">
+        <h2>계정 권한 관리</h2>
+        <p style="margin-bottom: 1rem; font-size: 0.9rem; color: #666;">점검자 및 농장주 권한을 부여할 수 있습니다.</p>
+        <form id="user-form" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <input type="text" id="user-name" placeholder="이름" required style="flex: 2;">
+          <select id="user-role" style="flex: 1;">
+            <option value="INSPECTOR">점검자</option>
+            <option value="OWNER">농장주</option>
+          </select>
+          <button type="submit" class="btn-primary" style="flex: 1;">추가</button>
+        </form>
+        
+        <div id="user-list" style="margin-top: 1.5rem;">
+          <!-- User list populated by JS -->
+        </div>
+      </section>
+
+      <!-- Item Management -->
+      <section class="card">
+        <h2>점검 항목 등록</h2>
+        <p style="margin-bottom: 1rem; font-size: 0.9rem; color: #666;">시스템에서 사용될 공식 점검 항목을 관리합니다.</p>
+        <form id="item-form">
+          <input type="text" id="item-title" placeholder="항목 제목 (예: 사육 공간 확보)" required>
+          <input type="text" id="item-category" placeholder="카테고리 (예: 사육환경)" required>
+          <textarea id="item-desc" placeholder="상세 설명" rows="2" required></textarea>
+          <input type="number" id="item-max" placeholder="배점 (최대 점수)" required>
+          <button type="submit" class="btn-primary" style="width: 100%;">항목 등록</button>
+        </form>
+        
+        <div id="item-list" style="margin-top: 1.5rem; max-height: 400px; overflow-y: auto;">
+          <!-- Item list populated by JS -->
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module">
+    import { Storage } from './js/storage.js';
+
+    // Guard
+    if (sessionStorage.getItem('awcfis_role') !== 'ADMIN') {
+      alert('관리자 권한이 없습니다.');
+      window.location.href = 'index.html';
+    }
+
+    const renderUsers = () => {
+      const users = Storage.getUsers();
+      const list = document.getElementById('user-list');
+      list.innerHTML = users.map(u => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem; border-bottom: 1px solid #eee;">
+          <div>
+            <strong>${u.name}</strong>
+            <span class="badge ${u.role === 'ADMIN' ? 'badge-admin' : (u.role === 'INSPECTOR' ? 'badge-inspector' : 'badge-owner')}">${u.role}</span>
+          </div>
+          ${u.role !== 'ADMIN' ? `<button onclick="deleteUser('${u.id}')" style="background: none; color: #d32f2f; padding: 0;">삭제</button>` : ''}
+        </div>
+      `).join('');
+    };
+
+    const renderItems = () => {
+      const items = Storage.getItems();
+      const list = document.getElementById('item-list');
+      list.innerHTML = items.map(i => `
+        <div style="padding: 1rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 0.5rem; position: relative;">
+          <div style="font-size: 0.8rem; color: var(--primary-color); font-weight: bold;">${i.category}</div>
+          <div style="font-weight: bold; margin: 0.2rem 0;">${i.title} (배점: ${i.maxScore})</div>
+          <div style="font-size: 0.85rem; color: #666;">${i.description}</div>
+          <button onclick="deleteItem('${i.id}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: none; color: #999; font-size: 0.8rem;">삭제</button>
+        </div>
+      `).join('');
+    };
+
+    window.deleteUser = (id) => {
+      if(confirm('이 사용자를 삭제하시겠습니까?')) {
+        Storage.deleteUser(id);
+        renderUsers();
+      }
+    };
+
+    window.deleteItem = (id) => {
+      if(confirm('이 점검 항목을 삭제하시겠습니까?')) {
+        Storage.deleteItem(id);
+        renderItems();
+      }
+    };
+
+    document.getElementById('user-form').onsubmit = (e) => {
+      e.preventDefault();
+      const name = document.getElementById('user-name').value;
+      const role = document.getElementById('user-role').value;
+      Storage.saveUser({ name, role });
+      e.target.reset();
+      renderUsers();
+    };
+
+    document.getElementById('item-form').onsubmit = (e) => {
+      e.preventDefault();
+      const title = document.getElementById('item-title').value;
+      const category = document.getElementById('item-category').value;
+      const description = document.getElementById('item-desc').value;
+      const maxScore = parseInt(document.getElementById('item-max').value);
+      Storage.saveItem({ title, category, description, maxScore });
+      e.target.reset();
+      renderItems();
+    };
+
+    renderUsers();
+    renderItems();
+  </script>
+</body>
+</html>

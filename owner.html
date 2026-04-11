@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWCFIS - 농장주</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="js/components/app-header.js"></script>
+</head>
+<body>
+  <app-header page-title="농장주 페이지"></app-header>
+  
+  <main class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+      <h1>자가 가상 점검</h1>
+      <span class="badge badge-owner">FARM OWNER</span>
+    </div>
+
+    <div class="grid" style="grid-template-columns: 2fr 1fr;">
+      <!-- Virtual Scoring Form -->
+      <section class="card">
+        <h3>가상 채점 수행</h3>
+        <p style="margin-bottom: 2rem; color: #666;">공식 점검 항목을 기반으로 우리 농장의 상태를 미리 점검해 보세요.</p>
+        
+        <form id="assessment-form">
+          <div id="assessment-items">
+            <!-- Items populated by JS -->
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">자가 점검 완료</button>
+        </form>
+      </section>
+
+      <!-- History / Results -->
+      <aside>
+        <section class="card" style="padding: 1.5rem;">
+          <h3>최근 점검 결과</h3>
+          <div id="history-list" style="margin-top: 1rem;">
+            <!-- History items populated by JS -->
+          </div>
+        </section>
+        
+        <div class="card" style="background-color: var(--secondary-color); border: none;">
+          <h4>💡 팁</h4>
+          <p style="font-size: 0.85rem; color: #555; margin-top: 0.5rem;">
+            가상 채점 결과는 공식 기록에 남지 않습니다. 실제 인증 점검 전에 취약점을 파악하는 용도로 활용하세요.
+          </p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script type="module">
+    import { Storage } from './js/storage.js';
+
+    // Guard
+    if (sessionStorage.getItem('awcfis_role') !== 'OWNER') {
+      alert('농장주 권한이 없습니다.');
+      window.location.href = 'index.html';
+    }
+
+    const itemsContainer = document.getElementById('assessment-items');
+    const historyList = document.getElementById('history-list');
+
+    const renderAssessmentForm = () => {
+      const items = Storage.getItems();
+      itemsContainer.innerHTML = items.map(item => `
+        <div style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #eee;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: var(--primary-color);">${item.category}</strong>
+            <span style="font-size: 0.8rem; color: #999;">최대 ${item.maxScore}점</span>
+          </div>
+          <p style="margin: 0.3rem 0; font-weight: bold;">${item.title}</p>
+          <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem;">
+            <input type="range" name="score_${item.id}" min="0" max="${item.maxScore}" value="0" style="flex: 1; margin-bottom: 0;" oninput="this.nextElementSibling.value = this.value + '점'">
+            <output style="width: 40px; font-weight: bold; color: var(--primary-color);">0점</output>
+          </div>
+        </div>
+      `).join('');
+    };
+
+    const renderHistory = () => {
+      const history = Storage.getSelfAssessments();
+      if (history.length === 0) {
+        historyList.innerHTML = '<p style="color: #999; font-size: 0.9rem;">이전 기록이 없습니다.</p>';
+        return;
+      }
+      
+      historyList.innerHTML = history.reverse().map(h => {
+        const total = h.results.reduce((acc, curr) => acc + curr.score, 0);
+        const max = Storage.getItems().reduce((acc, curr) => acc + curr.maxScore, 0);
+        const date = new Date(h.date).toLocaleDateString();
+        return `
+          <div style="padding: 0.8rem; border-bottom: 1px solid #eee; font-size: 0.9rem;">
+            <div style="display: flex; justify-content: space-between;">
+              <strong>${date}</strong>
+              <span style="color: var(--primary-color); font-weight: bold;">${total} / ${max}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    };
+
+    document.getElementById('assessment-form').onsubmit = (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const items = Storage.getItems();
+      const results = items.map(item => ({
+        itemId: item.id,
+        score: parseInt(formData.get(`score_${item.id}`))
+      }));
+
+      Storage.saveSelfAssessment({ results });
+      alert('자가 점검이 완료되었습니다. 결과를 확인하세요.');
+      renderHistory();
+    };
+
+    renderAssessmentForm();
+    renderHistory();
+  </script>
+</body>
+</html>

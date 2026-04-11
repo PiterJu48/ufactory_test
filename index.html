@@ -1,14 +1,49 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWCFIS - 홈</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="js/components/app-header.js"></script>
+  <script type="module" src="main.js"></script>
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+  <app-header page-title="AWCFIS"></app-header>
+  
+  <main class="container">
+    <div class="card" style="text-align: center; max-width: 600px; margin: 4rem auto;">
+      <h1 style="font-size: 2.5rem; color: var(--primary-color);">동물복지 인증<br>농장 점검 시스템</h1>
+      <p style="margin-bottom: 2.5rem; color: #666;">사용자의 역할을 선택하여 접속해 주세요.</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <button class="btn-primary" id="login-admin">관리자로 로그인</button>
+        <button class="btn-primary" id="login-inspector">점검자로 로그인</button>
+        <button class="btn-primary" id="login-owner">농장주로 로그인</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Animal Welfare Certified Farm Inspection System. All rights reserved.</p>
+  </footer>
+
+  <script type="module">
+    import { Storage } from './js/storage.js';
+    Storage.init();
+
+    document.getElementById('login-admin').onclick = () => {
+      sessionStorage.setItem('awcfis_role', 'ADMIN');
+      window.location.href = 'admin.html';
+    };
+    document.getElementById('login-inspector').onclick = () => {
+      sessionStorage.setItem('awcfis_role', 'INSPECTOR');
+      window.location.href = 'inspector.html';
+    };
+    document.getElementById('login-owner').onclick = () => {
+      sessionStorage.setItem('awcfis_role', 'OWNER');
+      window.location.href = 'owner.html';
+    };
+  </script>
 </body>
 </html>
