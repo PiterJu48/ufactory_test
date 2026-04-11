@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AWCFIS - 관리자</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script type="module" src="js/components/app-header.js"></script>
 </head>
 <body>
@@ -15,6 +16,19 @@
       <h1>관리자 대시보드</h1>
       <span class="badge badge-admin">ADMINISTRATOR</span>
     </div>
+
+    <!-- Inspection Reports Section -->
+    <section class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>공식 점검 결과 내역</h2>
+        <button id="download-excel" class="btn-outline">Excel 다운로드</button>
+      </div>
+      <p style="margin-bottom: 1.5rem; font-size: 0.9rem; color: #666;">점검자가 제출한 공식 점검 결과 목록입니다.</p>
+      
+      <div id="report-list" style="overflow-x: auto;">
+        <!-- Report list populated by JS -->
+      </div>
+    </section>
 
     <div class="grid">
       <!-- User Management -->
@@ -124,8 +138,87 @@
       renderItems();
     };
 
+    const renderReports = () => {
+      const reports = Storage.getReports();
+      const users = Storage.getUsers();
+      const list = document.getElementById('report-list');
+      
+      if (reports.length === 0) {
+        list.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">제출된 점검 결과가 없습니다.</p>';
+        return;
+      }
+
+      const tableHtml = `
+        <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+          <thead>
+            <tr style="background: var(--secondary-color); text-align: left;">
+              <th style="padding: 0.8rem; border-bottom: 2px solid #ddd;">날짜</th>
+              <th style="padding: 0.8rem; border-bottom: 2px solid #ddd;">농장</th>
+              <th style="padding: 0.8rem; border-bottom: 2px solid #ddd;">총점</th>
+              <th style="padding: 0.8rem; border-bottom: 2px solid #ddd;">의견</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${reports.map(r => {
+              const farm = users.find(u => u.id === r.farmId)?.name || '알 수 없음';
+              const totalScore = r.results.reduce((acc, curr) => acc + curr.score, 0);
+              const maxScore = Storage.getItems().reduce((acc, curr) => acc + curr.maxScore, 0);
+              const date = new Date(r.date).toLocaleDateString();
+              return `
+                <tr style="border-bottom: 1px solid #eee;">
+                  <td style="padding: 0.8rem;">${date}</td>
+                  <td style="padding: 0.8rem;"><strong>${farm}</strong></td>
+                  <td style="padding: 0.8rem; color: var(--primary-color); font-weight: bold;">${totalScore} / ${maxScore}</td>
+                  <td style="padding: 0.8rem; font-size: 0.85rem; color: #555;">${r.overallComment || '-'}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+      list.innerHTML = tableHtml;
+    };
+
+    document.getElementById('download-excel').onclick = () => {
+      const reports = Storage.getReports();
+      if (reports.length === 0) {
+        alert('다운로드할 데이터가 없습니다.');
+        return;
+      }
+
+      const items = Storage.getItems();
+      const users = Storage.getUsers();
+      
+      // Flatten data for Excel
+      const excelData = reports.flatMap(r => {
+        const farm = users.find(u => u.id === r.farmId)?.name || '알 수 없음';
+        const date = new Date(r.date).toLocaleDateString();
+        
+        return r.results.map(res => {
+          const item = items.find(i => i.id === res.itemId);
+          return {
+            '날짜': date,
+            '농장': farm,
+            '카테고리': item?.category || '-',
+            '평가항목': item?.title || '-',
+            '점수': res.score,
+            '배점': item?.maxScore || '-',
+            '결과': res.status === 'PASS' ? '합격' : '불합격',
+            '항목의견': res.comment || '',
+            '종합의견': r.overallComment || ''
+          };
+        });
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "InspectionResults");
+      XLSX.writeFile(workbook, `AWCFIS_점검결과_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
+
     renderUsers();
     renderItems();
+    renderReports();
   </script>
 </body>
 </html>
