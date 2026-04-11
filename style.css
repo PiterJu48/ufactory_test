@@ -150,9 +150,12 @@ input:focus {
 .badge-inspector { background: #fff3e0; color: #f57c00; }
 .badge-owner { background: #f1f8e9; color: #388e3c; }
 
-@container (max-width: 600px) {
+@media (max-width: 768px) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+  }
+  .container {
+    padding: 1rem;
   }
 }
 
