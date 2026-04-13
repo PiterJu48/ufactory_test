@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS items (
 CREATE TABLE IF NOT EXISTS reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID REFERENCES profiles(id) ON DELETE CASCADE, -- 리포트 대상자(농장주)
-  inspector_id UUID REFERENCES profiles(id) ON DELETE SET NULL, -- 점검자
+  inspector_id UUID REFERENCES profiles(id) ON DELETE SET NULL, -- 평가자
   overall_comment TEXT,
   is_virtual BOOLEAN DEFAULT FALSE, -- 자가진단 여부
   created_at TIMESTAMPTZ DEFAULT NOW()

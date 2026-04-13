@@ -105,7 +105,7 @@ class AppHeader extends HTMLElement {
             <li><a href="index.html">홈</a></li>
             ${role === 'ADMIN' ? '<li><a href="admin.html">시스템관리</a></li>' : ''}
             ${role === 'ADMIN' ? '<li><a href="items.html">평가항목 관리</a></li>' : ''}
-            ${role === 'INSPECTOR' ? '<li><a href="inspector.html">현장점검</a></li>' : ''}
+            ${role === 'INSPECTOR' ? '<li><a href="inspector.html">현장평가</a></li>' : ''}
             ${role === 'OWNER' ? '<li><a href="owner.html">자가진단</a></li>' : ''}
             ${user ? '<li><a href="#" id="logout">로그아웃</a></li>' : ''}
           </ul>
