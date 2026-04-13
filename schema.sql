@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   category TEXT NOT NULL, -- 예: 사육환경, 급이/급수 등
-  name TEXT NOT NULL,     -- 점검 항목명
+  title TEXT NOT NULL,    -- 점검 항목명
   description TEXT,       -- 세부 기준 설명
   max_score INTEGER DEFAULT 5,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS items (
 CREATE TABLE IF NOT EXISTS reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID REFERENCES profiles(id) ON DELETE CASCADE, -- 리포트 대상자(농장주)
-  inspector_id UUID REFERENCES profiles(id) ON DELETE SET NULL, -- 점검자
+  inspector_id UUID REFERENCES profiles(id) ON DELETE SET NULL, -- 평가자
   overall_comment TEXT,
   is_virtual BOOLEAN DEFAULT FALSE, -- 자가진단 여부
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -77,10 +77,10 @@ BEGIN
 END $$;
 
 -- 초기 샘플 데이터 삽입
-INSERT INTO items (category, name, description, max_score) 
+INSERT INTO items (category, title, description, max_score) 
 SELECT '사육 환경', '바닥 상태', '가축이 편히 쉴 수 있는 건조하고 청결한 바닥 제공 여부', 5
-WHERE NOT EXISTS (SELECT 1 FROM items WHERE name = '바닥 상태');
+WHERE NOT EXISTS (SELECT 1 FROM items WHERE title = '바닥 상태');
 
-INSERT INTO items (category, name, description, max_score) 
+INSERT INTO items (category, title, description, max_score) 
 SELECT '급이 및 급수', '음수 청결도', '신선하고 깨끗한 물의 상시 공급 여부', 5
-WHERE NOT EXISTS (SELECT 1 FROM items WHERE name = '음수 청결도');
+WHERE NOT EXISTS (SELECT 1 FROM items WHERE title = '음수 청결도');

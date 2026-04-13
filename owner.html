@@ -12,33 +12,33 @@
   
   <main class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-      <h1>자가 가상 점검</h1>
-      <span class="badge badge-owner">FARM OWNER</span>
+      <h1>농가 자가 진단</h1>
+      <span class="badge badge-owner">농장 운영자</span>
     </div>
 
     <div class="grid">
       <!-- Virtual Scoring Form -->
       <section class="card">
-        <h3>가상 채점 수행</h3>
-        <p style="margin-bottom: 2rem; color: #666;">공식 점검 항목을 기반으로 우리 농장의 상태를 미리 점검해 보세요.</p>
+        <h3>자가 진단 수행</h3>
+        <p style="margin-bottom: 2rem; color: #666; font-size: 0.9rem;">공식 점검 지표를 활용하여 농장의 동물복지 수준을 자율적으로 점검하십시오.</p>
         
         <form id="assessment-form">
           <div id="assessment-items"></div>
-          <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">자가 점검 완료</button>
+          <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">진단 완료 및 저장</button>
         </form>
       </section>
 
       <!-- History / Results -->
       <aside>
         <section class="card" style="padding: 1.5rem;">
-          <h3>최근 점검 결과</h3>
+          <h3>최근 진단 이력</h3>
           <div id="history-list" style="margin-top: 1rem;"></div>
         </section>
         
-        <div class="card" style="background-color: var(--secondary-color); border: none;">
-          <h4>💡 팁</h4>
-          <p style="font-size: 0.85rem; color: #555; margin-top: 0.5rem;">
-            가상 채점 결과는 공식 기록에 남지 않습니다. 실제 인증 점검 전에 취약점을 파악하는 용도로 활용하세요.
+        <div class="card" style="background-color: var(--secondary-color); border: 1px solid #dee2e6;">
+          <h4 style="font-size: 0.9rem; color: #333;">안내 사항</h4>
+          <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem; line-height: 1.5;">
+            본 자가 진단 결과는 참고용으로만 활용되며, 공식 인증 기록으로 간주되지 않습니다. 실제 점검 전 미흡 사항을 사전에 보완하는 용도로 사용하시기 바랍니다.
           </p>
         </div>
       </aside>
