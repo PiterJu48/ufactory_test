@@ -14,72 +14,98 @@ class AppHeader extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         header {
-          background-color: #2e7d32;
-          color: white;
-          padding: 1rem 2rem;
+          background-color: #ffffff;
+          color: #1b3a6d;
+          padding: 0 2rem;
+          height: 70px;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-          font-family: 'Inter', system-ui, sans-serif;
+          box-shadow: 0 1px 0 rgba(0,0,0,0.05);
+          border-bottom: 3px solid #1b3a6d;
+          font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
         .logo {
-          font-size: 1.5rem;
+          font-size: 1.4rem;
           font-weight: 800;
+          letter-spacing: -0.5px;
+          cursor: pointer;
+          color: #1b3a6d;
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          cursor: pointer;
+        }
+        .logo-text {
+          border-left: 2px solid #ddd;
+          margin-left: 10px;
+          padding-left: 10px;
+          font-size: 0.9rem;
+          font-weight: 500;
+          color: #666;
         }
         nav ul {
           display: flex;
           list-style: none;
-          gap: 1.5rem;
+          gap: 2.5rem;
           margin: 0;
           padding: 0;
+          align-items: center;
+          height: 70px;
+        }
+        nav li {
+          height: 100%;
+          display: flex;
           align-items: center;
         }
         nav a {
           text-decoration: none;
-          color: white;
-          font-weight: 500;
-          opacity: 0.9;
-          transition: opacity 0.2s;
-          font-size: 0.9rem;
+          color: #444;
+          font-weight: 600;
+          font-size: 0.95rem;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          position: relative;
+          transition: color 0.2s;
         }
         nav a:hover {
-          opacity: 1;
+          color: #1b3a6d;
         }
         .role-info {
           display: flex;
           align-items: center;
-          gap: 0.8rem;
+          gap: 1rem;
         }
         .role-badge {
-          background: rgba(255,255,255,0.2);
-          padding: 0.3rem 0.8rem;
-          border-radius: 20px;
-          font-size: 0.75rem;
-          font-weight: bold;
+          background: #f8f9fa;
+          color: #495057;
+          border: 1px solid #dee2e6;
+          padding: 0.2rem 0.6rem;
+          border-radius: 2px;
+          font-size: 0.7rem;
+          font-weight: 700;
           text-transform: uppercase;
         }
         .user-name {
           font-size: 0.85rem;
-          font-weight: 500;
+          font-weight: 600;
+          color: #333;
         }
         @media (max-width: 768px) {
-          header { padding: 1rem; flex-direction: column; gap: 1rem; }
+          header { height: auto; padding: 1rem; flex-direction: column; gap: 1rem; }
+          nav ul { height: auto; gap: 1rem; }
+          nav a { padding: 0.5rem 0; }
         }
       </style>
       <header>
         <div class="logo" id="logo">
-          <span>🌿</span> AWCFIS
+          AWCFIS <span class="logo-text">동물복지인증농장 통합관리시스템</span>
         </div>
         <nav>
           <ul>
             <li><a href="index.html">홈</a></li>
-            ${role === 'ADMIN' ? '<li><a href="admin.html">관리</a></li>' : ''}
-            ${role === 'INSPECTOR' ? '<li><a href="inspector.html">점검</a></li>' : ''}
+            ${role === 'ADMIN' ? '<li><a href="admin.html">시스템관리</a></li>' : ''}
+            ${role === 'ADMIN' ? '<li><a href="items.html">평가항목 관리</a></li>' : ''}
+            ${role === 'INSPECTOR' ? '<li><a href="inspector.html">현장점검</a></li>' : ''}
             ${role === 'OWNER' ? '<li><a href="owner.html">자가진단</a></li>' : ''}
             ${user ? '<li><a href="#" id="logout">로그아웃</a></li>' : ''}
           </ul>
